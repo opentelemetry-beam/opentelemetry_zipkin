@@ -1,6 +1,6 @@
 # OpenTelemetry Zipkin Exporter
 
-![](https://github.com/opentelemetry-beam/opentelemetry_zipkin/workflows/.github/workflows/main.yml/badge.svg)
+![](https://github.com/opentelemetry-beam/opentelemetry_zipkin/workflows/OpenTelemetry%20Zipkin%20Tests/badge.svg)
 
 Zipkin exporter for OpenTelemetry Erlang/Elixir instrumentation.
 
@@ -23,5 +23,5 @@ An Elixir release uses `releases.exs`:
 
 ``` elixir
 config :opentelemetry,
-    processors: [{:ot_batch_processor, [{:exporter, {:opentelemetry_zipkin, %{address: 'http://localhost:9411/api/v2/spans', local_endpoint: %{"serviceName" => "ServiceName"}}}}]}]
+    :processors, [{:ot_batch_processor, [{:exporter, {:opentelemetry_zipkin, %{address: 'http://localhost:9411/api/v2/spans', local_endpoint: %{"serviceName" => "ServiceName"}}}}]}]
 ```
