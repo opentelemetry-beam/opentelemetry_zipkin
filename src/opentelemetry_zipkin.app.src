@@ -1,0 +1,17 @@
+{application, opentelemetry_zipkin,
+ [{description, "Zipkin OpenTelemetry Exporter"},
+  {vsn, "git"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib,
+    wts,
+    jsx,
+    opentelemetry_api
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.

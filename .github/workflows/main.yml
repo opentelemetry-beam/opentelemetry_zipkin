@@ -1,0 +1,29 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    name: Test on OTP ${{ matrix.otp_version }} and ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    services:
+      zipkin:
+        image: openzipkin/zipkin-slim
+        ports:
+        - 9411:9411
+
+    strategy:
+      matrix:
+        otp_version: [21, 22]
+        os: [ubuntu-latest]
+
+    container:
+      image: erlang:${{ matrix.otp_version }}
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Compile
+      run: rebar3 compile
+    - name: Run tests
+      run: rebar3 ct
