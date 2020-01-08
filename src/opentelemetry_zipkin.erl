@@ -35,7 +35,7 @@ export(Tab, #state{address=Address,
 
     Json = iolist_to_binary(["[", lists:join($,, ZSpans), "]"]),
     case httpc:request(post, {Address, [], "application/json", Json}, [], []) of
-        {ok, {{_, 202, _}, _, _}} ->
+        {ok, {{_, Code, _}, _, _}} when Code >= 200 andalso Code =< 202 ->
             ok;
         {ok, {{_, Code, _}, _, Message}} ->
             ?LOG_INFO("error response from service exported to status=~p ~p",
