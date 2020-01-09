@@ -59,12 +59,10 @@ zipkin_span(Span, LocalEndpoint) ->
        <<"id">> => iolist_to_binary(io_lib:format("~16.16.0b", [Span#span.span_id])),
        <<"timestamp">> => wts:to_absolute(Span#span.start_time),
        <<"duration">> => wts:duration(Span#span.start_time, Span#span.end_time),
-       <<"debug">> => false, %% TODO: get from attributes?
-       <<"shared">> => false, %% TODO: get from attributes?
-       <<"localEndpoint">> => LocalEndpoint,
+       %% <<"debug">> => false, %% TODO: get from attributes?
+       %% <<"shared">> => false, %% TODO: get from attributes?
+       <<"localEndpoint">> => LocalEndpoint
        %% <<"remoteEndpoint">> =>  %% TODO: get from attributes?
-       <<"annotations">> => to_annotations(Span#span.timed_events),
-       <<"tags">> => to_tags(Span#span.attributes) %% TODO: merge with oc_tags?
      }.
 
 to_annotations(TimeEvents) ->
@@ -117,14 +115,28 @@ optional_fields(Span) ->
                             Value ->
                                 maps:put(Field, Value, Acc)
                         end
-                end, #{}, [<<"kind">>, <<"parentId">>]).
+                end, #{}, [<<"kind">>, <<"parentId">>, <<"annotations">>, <<"tags">>]).
 
+span_field(<<"annotations">>, #span{timed_events=[]}) ->
+    undefined;
+span_field(<<"annotations">>, #span{timed_events=TimedEvents}) ->
+    to_annotations(TimedEvents);
+span_field(<<"tags">>, #span{attributes=[]}) ->
+    undefined;
+span_field(<<"tags">>, #span{attributes=Attributes}) ->
+    to_tags(Attributes);
 span_field(<<"parentId">>, #span{parent_span_id=undefined}) ->
     undefined;
 span_field(<<"parentId">>, #span{parent_span_id=ParentId}) ->
     iolist_to_binary(io_lib:format("~16.16.0b", [ParentId]));
 span_field(<<"kind">>, #span{kind=?SPAN_KIND_UNSPECIFIED}) ->
     undefined;
+span_field(<<"kind">>, #span{kind=?SPAN_KIND_INTERNAL}) ->
+    undefined;
+span_field(<<"kind">>, #span{kind=?SPAN_KIND_PRODUCER}) ->
+    <<"PRODUCER">>;
+span_field(<<"kind">>, #span{kind=?SPAN_KIND_CONSUMER}) ->
+    <<"CONSUMER">>;
 span_field(<<"kind">>, #span{kind=?SPAN_KIND_SERVER}) ->
     <<"SERVER">>;
 span_field(<<"kind">>, #span{kind=?SPAN_KIND_CLIENT}) ->
