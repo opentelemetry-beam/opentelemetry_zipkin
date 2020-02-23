@@ -6,6 +6,7 @@
 
 -include_lib("kernel/include/logger.hrl").
 -include_lib("opentelemetry_api/include/opentelemetry.hrl").
+-include_lib("opentelemetry/include/ot_span.hrl").
 
 -define(DEFAULT_ZIPKIN_ADDRESS, "http://localhost:9411/api/v2/spans").
 -define(DEFAULT_LOCAL_ENDPOINT, #{<<"serviceName">> => node()}).
