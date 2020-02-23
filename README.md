@@ -4,6 +4,8 @@
 
 Zipkin exporter for OpenTelemetry Erlang/Elixir instrumentation.
 
+Requires Zipkin 2.8 or above because it uses the [v2 API](https://zipkin.io/zipkin-api/#/default/post_spans) with [protobuf](https://github.com/openzipkin/zipkin-api/blob/master/zipkin.proto) content type.
+
 ## Setup
 
 Easiest way to setup is to add configuration for the batch processor in OpenTelemetry application environment.

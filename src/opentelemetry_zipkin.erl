@@ -7,9 +7,10 @@
 -include_lib("kernel/include/logger.hrl").
 -include_lib("opentelemetry_api/include/opentelemetry.hrl").
 -include_lib("opentelemetry/include/ot_span.hrl").
+-include("opentelemetry_zipkin_pb.hrl").
 
 -define(DEFAULT_ZIPKIN_ADDRESS, "http://localhost:9411/api/v2/spans").
--define(DEFAULT_LOCAL_ENDPOINT, #{<<"serviceName">> => node()}).
+-define(DEFAULT_LOCAL_ENDPOINT, #{service_name => node()}).
 
 -record(state, {address :: string(),
                 endpoint :: map()}).
@@ -25,7 +26,7 @@ export(Tab, #state{address=Address,
     ZSpans = ets:foldl(fun(Span, Acc) ->
                                try zipkin_span(Span, LocalEndpoint) of
                                    ZipkinSpan ->
-                                       [jsx:encode(ZipkinSpan) | Acc]
+                                       [ZipkinSpan | Acc]
                                catch
                                    C:T:S ->
                                        %% failed to encode
@@ -34,8 +35,8 @@ export(Tab, #state{address=Address,
                                end
                        end, [], Tab),
 
-    Json = iolist_to_binary(["[", lists:join($,, ZSpans), "]"]),
-    case httpc:request(post, {Address, [], "application/json", Json}, [], []) of
+    Proto = opentelemetry_zipkin_pb:encode_msg(#zipkin_list_of_spans{spans=ZSpans}),
+    case httpc:request(post, {Address, [], "application/x-protobuf", Proto}, [], []) of
         {ok, {{_, Code, _}, _, _}} when Code >= 200 andalso Code =< 202 ->
             ok;
         {ok, {{_, Code, _}, _, Message}} ->
@@ -54,16 +55,20 @@ shutdown(_) ->
 
 
 zipkin_span(Span, LocalEndpoint) ->
-    (optional_fields(Span))#{
-       <<"traceId">> => iolist_to_binary(io_lib:format("~32.16.0b", [Span#span.trace_id])),
-       <<"name">> => iolist_to_binary(Span#span.name),
-       <<"id">> => iolist_to_binary(io_lib:format("~16.16.0b", [Span#span.span_id])),
-       <<"timestamp">> => wts:to_absolute(Span#span.start_time),
-       <<"duration">> => wts:duration(Span#span.start_time, Span#span.end_time),
-       %% <<"debug">> => false, %% TODO: get from attributes?
-       %% <<"shared">> => false, %% TODO: get from attributes?
-       <<"localEndpoint">> => LocalEndpoint
-       %% <<"remoteEndpoint">> =>  %% TODO: get from attributes?
+    #zipkin_span{
+       trace_id = <<(Span#span.trace_id):128>>,
+       name=iolist_to_binary(Span#span.name),
+       id = <<(Span#span.span_id):64>>,
+       timestamp=wts:to_absolute(Span#span.start_time),
+       duration=wts:duration(Span#span.start_time, Span#span.end_time),
+       %% debug=false, %% TODO: get from attributes?
+       %% shared=false, %% TODO: get from attributes?
+       kind=to_kind(Span#span.kind),
+       parent_id=to_parent_id(Span#span.parent_span_id),
+       annotations=to_annotations(Span#span.events),
+       tags=to_tags(Span#span.attributes),
+       local_endpoint=LocalEndpoint
+       %% remote_endpoint %% TODO: get from attributes?
      }.
 
 to_annotations(TimeEvents) ->
@@ -71,11 +76,11 @@ to_annotations(TimeEvents) ->
 
 to_annotations([], Annotations) ->
     Annotations;
-to_annotations([#timed_event{time_unixnano=Timestamp,
-                             event=#event{name=Name,
-                                          attributes=Attributes}} | Rest], Annotations) ->
-    to_annotations(Rest, [#{<<"timestamp">> => wts:to_absolute(Timestamp),
-                            <<"value">> => annotation_value(Name, Attributes)} | Annotations]).
+to_annotations([#event{time=Timestamp,
+                       name=Name,
+                       attributes=Attributes} | Rest], Annotations) ->
+    to_annotations(Rest, [#zipkin_annotation{timestamp=wts:to_absolute(Timestamp),
+                                             value=annotation_value(Name, Attributes)} | Annotations]).
 
 annotation_value(Name, Attributes) ->
     AttrString = lists:join(", ", [[Key, ": ", to_string(Value)] ||
@@ -104,47 +109,48 @@ to_binary_string(Value) ->
     Value.
 
 to_tags(Attributes) ->
-    lists:foldl(fun({Name, Value}, Acc) ->
-                     Acc#{to_binary_string(Name) => to_binary_string(Value)}
-             end, #{}, Attributes).
+    lists:map(fun({Name, Value}) ->
+                     {to_binary_string(Name), to_binary_string(Value)}
+              end, Attributes).
 
-optional_fields(Span) ->
-    lists:foldl(fun(Field, Acc) ->
-                        case span_field(Field, Span) of
-                            undefined ->
-                                Acc;
-                            Value ->
-                                maps:put(Field, Value, Acc)
-                        end
-                end, #{}, [<<"kind">>, <<"parentId">>, <<"annotations">>, <<"tags">>]).
+to_parent_id(undefined) ->
+    undefined;
+to_parent_id(ParentId) ->
+    <<ParentId:64>>.
 
-span_field(<<"annotations">>, #span{timed_events=[]}) ->
-    undefined;
-span_field(<<"annotations">>, #span{timed_events=TimedEvents}) ->
-    to_annotations(TimedEvents);
-span_field(<<"tags">>, #span{attributes=[]}) ->
-    undefined;
-span_field(<<"tags">>, #span{attributes=Attributes}) ->
-    to_tags(Attributes);
-span_field(<<"parentId">>, #span{parent_span_id=undefined}) ->
-    undefined;
-span_field(<<"parentId">>, #span{parent_span_id=ParentId}) ->
-    iolist_to_binary(io_lib:format("~16.16.0b", [ParentId]));
-span_field(<<"kind">>, #span{kind=?SPAN_KIND_UNSPECIFIED}) ->
-    undefined;
-span_field(<<"kind">>, #span{kind=?SPAN_KIND_INTERNAL}) ->
-    undefined;
-span_field(<<"kind">>, #span{kind=?SPAN_KIND_PRODUCER}) ->
-    <<"PRODUCER">>;
-span_field(<<"kind">>, #span{kind=?SPAN_KIND_CONSUMER}) ->
-    <<"CONSUMER">>;
-span_field(<<"kind">>, #span{kind=?SPAN_KIND_SERVER}) ->
-    <<"SERVER">>;
-span_field(<<"kind">>, #span{kind=?SPAN_KIND_CLIENT}) ->
-    <<"CLIENT">>.
+to_kind(undefined) ->
+    'SPAN_KIND_UNSPECIFIED';
+to_kind(?SPAN_KIND_UNSPECIFIED) ->
+    'SPAN_KIND_UNSPECIFIED';
+to_kind(?SPAN_KIND_INTERNAL) ->
+    'SPAN_KIND_UNSPECIFIED';
+to_kind(?SPAN_KIND_PRODUCER) ->
+    'PRODUCER';
+to_kind(?SPAN_KIND_CONSUMER) ->
+    'CONSUMER';
+to_kind(?SPAN_KIND_SERVER) ->
+    'SERVER';
+to_kind(?SPAN_KIND_CLIENT) ->
+    'CLIENT'.
 
 zipkin_address(Options) ->
     maps:get(address, Options, ?DEFAULT_ZIPKIN_ADDRESS).
 
 local_endpoint(Options) ->
-    maps:get(local_endpoint, Options, ?DEFAULT_LOCAL_ENDPOINT).
+    LocalEndpoint = maps:get(local_endpoint, Options, ?DEFAULT_LOCAL_ENDPOINT),
+    #zipkin_endpoint{service_name=to_string(maps:get(service_name, LocalEndpoint, node())),
+                     ipv4=ip_to_string(maps:get(ipv4, LocalEndpoint, undefined)),
+                     ipv6=ip_to_string(maps:get(ipv6, LocalEndpoint, undefined)),
+                     port=maps:get(port, LocalEndpoint, 0)}.
+
+ip_to_string(undefined) ->
+    undefined;
+ip_to_string(IP) when is_tuple(IP) ->
+    case inet:ntoa(IP) of
+        {error, einval} ->
+            to_string(IP);
+        IPString ->
+            IPString
+    end;
+ip_to_string(IP) ->
+    to_string(IP).

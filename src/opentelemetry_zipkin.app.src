@@ -6,7 +6,6 @@
    [kernel,
     stdlib,
     wts,
-    jsx,
     opentelemetry_api
    ]},
   {env,[]},
