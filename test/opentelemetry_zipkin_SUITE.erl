@@ -17,13 +17,15 @@ verify_export(_Config) ->
                   _ ->
                       "http://zipkin:9411/api/v2/spans"
               end,
+    Resource = ot_resource:create([{"service.name",
+                                    "my-test-service"}]),
     {ok, State} = opentelemetry_zipkin:init(#{address => Address,
                                              local_endpoint => #{service_name => my_service,
                                                                  ip4 => {1,2,3,4},
                                                                  port => 8000}}),
     Tid = ets:new(span_tab, [{keypos, #span.span_id}]),
 
-    ?assertMatch(ok, opentelemetry_zipkin:export(Tid, State)),
+    ?assertMatch(ok, opentelemetry_zipkin:export(Tid, Resource, State)),
 
     TraceId = opentelemetry:generate_trace_id(),
     SpanId = opentelemetry:generate_span_id(),
@@ -60,5 +62,5 @@ verify_export(_Config) ->
                       attributes = [{<<"attr-2">>, <<"value-2">>}]},
     true = ets:insert(Tid, ChildSpan),
 
-    ?assertMatch(ok, opentelemetry_zipkin:export(Tid, State)),
+    ?assertMatch(ok, opentelemetry_zipkin:export(Tid, Resource, State)),
     ok.

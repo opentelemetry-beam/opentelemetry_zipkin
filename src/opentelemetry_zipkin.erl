@@ -1,7 +1,7 @@
 -module(opentelemetry_zipkin).
 
 -export([init/1,
-         export/2,
+         export/3,
          shutdown/1]).
 
 -include_lib("kernel/include/logger.hrl").
@@ -21,10 +21,12 @@ init(Opts) ->
     {ok, #state{address=Address,
                 endpoint=LocalEndpoint}}.
 
-export(Tab, #state{address=Address,
-                   endpoint=LocalEndpoint}) ->
+export(Tab, Resource, #state{address=Address,
+                             endpoint=LocalEndpoint}) ->
+    Attributes = ot_resource:attributes(Resource),
+    LocalEndpoint1 = local_endpoint_from_resource(Attributes, LocalEndpoint),
     ZSpans = ets:foldl(fun(Span, Acc) ->
-                               try zipkin_span(Span, LocalEndpoint) of
+                               try zipkin_span(Span, LocalEndpoint1) of
                                    ZipkinSpan ->
                                        [ZipkinSpan | Acc]
                                catch
@@ -135,6 +137,14 @@ to_kind(?SPAN_KIND_CLIENT) ->
 
 zipkin_address(Options) ->
     maps:get(address, Options, ?DEFAULT_ZIPKIN_ADDRESS).
+
+local_endpoint_from_resource(Attributes, LocalEndpoint) ->
+    case lists:keyfind(<<"service.name">>, 1, Attributes) of
+        {<<"service.name">>, ServiceName} ->
+            LocalEndpoint#zipkin_endpoint{service_name=ServiceName};
+        _ ->
+            LocalEndpoint
+    end.
 
 local_endpoint(Options) ->
     LocalEndpoint = maps:get(local_endpoint, Options, ?DEFAULT_LOCAL_ENDPOINT),
