@@ -61,8 +61,8 @@ zipkin_span(Span, LocalEndpoint) ->
        trace_id = <<(Span#span.trace_id):128>>,
        name=iolist_to_binary(Span#span.name),
        id = <<(Span#span.span_id):64>>,
-       timestamp=wts:to_absolute(Span#span.start_time),
-       duration=wts:duration(Span#span.start_time, Span#span.end_time),
+       timestamp=opentelemetry:convert_timestamp(Span#span.start_time, microsecond),
+       duration=erlang:convert_time_unit(Span#span.end_time - Span#span.start_time, native, microsecond),
        %% debug=false, %% TODO: get from attributes?
        %% shared=false, %% TODO: get from attributes?
        kind=to_kind(Span#span.kind),
@@ -78,10 +78,10 @@ to_annotations(TimeEvents) ->
 
 to_annotations([], Annotations) ->
     Annotations;
-to_annotations([#event{time=Timestamp,
+to_annotations([#event{system_time_nano=Timestamp,
                        name=Name,
                        attributes=Attributes} | Rest], Annotations) ->
-    to_annotations(Rest, [#zipkin_annotation{timestamp=wts:to_absolute(Timestamp),
+    to_annotations(Rest, [#zipkin_annotation{timestamp=erlang:convert_time_unit(Timestamp, nanosecond, microsecond),
                                              value=annotation_value(Name, Attributes)} | Annotations]).
 
 annotation_value(Name, Attributes) ->

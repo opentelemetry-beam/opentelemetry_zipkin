@@ -5,7 +5,6 @@
   {applications,
    [kernel,
     stdlib,
-    wts,
     opentelemetry_api
    ]},
   {env,[]},
