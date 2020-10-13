@@ -37,17 +37,23 @@ export(Tab, Resource, #state{address=Address,
                                end
                        end, [], Tab),
 
-    Proto = opentelemetry_zipkin_pb:encode_msg(#zipkin_list_of_spans{spans=ZSpans}),
-    case httpc:request(post, {Address, [], "application/x-protobuf", Proto}, [], []) of
-        {ok, {{_, Code, _}, _, _}} when Code >= 200 andalso Code =< 202 ->
+    case ZSpans of
+        [] ->
+            %% nothing to send
             ok;
-        {ok, {{_, Code, _}, _, Message}} ->
-            ?LOG_INFO("error response from service exported to status=~p ~p",
-                      [Code, Message]),
-            error;
-        {error, Reason} ->
-            ?LOG_INFO("client error exporting spans ~p", [Reason]),
-            error
+        _ ->
+            Proto = opentelemetry_zipkin_pb:encode_msg(#zipkin_list_of_spans{spans=ZSpans}),
+            case httpc:request(post, {Address, [], "application/x-protobuf", Proto}, [], []) of
+                {ok, {{_, Code, _}, _, _}} when Code >= 200 andalso Code =< 202 ->
+                    ok;
+                {ok, {{_, Code, _}, _, Message}} ->
+                    ?LOG_INFO("error response from service exported to status=~p ~p",
+                            [Code, Message]),
+                    error;
+                {error, Reason} ->
+                    ?LOG_INFO("client error exporting spans ~p", [Reason]),
+                    error
+            end
     end.
 
 shutdown(_) ->
