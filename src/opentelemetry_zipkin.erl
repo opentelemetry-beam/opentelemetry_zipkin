@@ -23,37 +23,42 @@ init(Opts) ->
 
 export(Tab, Resource, #state{address=Address,
                              endpoint=LocalEndpoint}) ->
-    Attributes = ot_resource:attributes(Resource),
-    LocalEndpoint1 = local_endpoint_from_resource(Attributes, LocalEndpoint),
-    ZSpans = ets:foldl(fun(Span, Acc) ->
-                               try zipkin_span(Span, LocalEndpoint1) of
-                                   ZipkinSpan ->
-                                       [ZipkinSpan | Acc]
-                               catch
-                                   C:T:S ->
-                                       %% failed to encode
-                                       ?LOG_DEBUG("failed to encode span to Zipkin format ~p:~p ~p", [C, T, S]),
-                                       Acc
-                               end
-                       end, [], Tab),
+    case opentelemetry_enabled() of
+        true ->
+            Attributes = ot_resource:attributes(Resource),
+            LocalEndpoint1 = local_endpoint_from_resource(Attributes, LocalEndpoint),
+            ZSpans = ets:foldl(fun(Span, Acc) ->
+                                    try zipkin_span(Span, LocalEndpoint1) of
+                                        ZipkinSpan ->
+                                            [ZipkinSpan | Acc]
+                                    catch
+                                        C:T:S ->
+                                            %% failed to encode
+                                            ?LOG_DEBUG("failed to encode span to Zipkin format ~p:~p ~p", [C, T, S]),
+                                            Acc
+                                    end
+                            end, [], Tab),
 
-    case ZSpans of
-        [] ->
-            %% nothing to send
-            ok;
-        _ ->
-            Proto = opentelemetry_zipkin_pb:encode_msg(#zipkin_list_of_spans{spans=ZSpans}),
-            case httpc:request(post, {Address, [], "application/x-protobuf", Proto}, [], []) of
-                {ok, {{_, Code, _}, _, _}} when Code >= 200 andalso Code =< 202 ->
+            case ZSpans of
+                [] ->
+                    %% nothing to send
                     ok;
-                {ok, {{_, Code, _}, _, Message}} ->
-                    ?LOG_INFO("error response from service exported to status=~p ~p",
-                            [Code, Message]),
-                    error;
-                {error, Reason} ->
-                    ?LOG_INFO("client error exporting spans ~p", [Reason]),
-                    error
-            end
+                _ ->
+                    Proto = opentelemetry_zipkin_pb:encode_msg(#zipkin_list_of_spans{spans=ZSpans}),
+                    case httpc:request(post, {Address, [], "application/x-protobuf", Proto}, [], []) of
+                        {ok, {{_, Code, _}, _, _}} when Code >= 200 andalso Code =< 202 ->
+                            ok;
+                        {ok, {{_, Code, _}, _, Message}} ->
+                            ?LOG_INFO("error response from service exported to status=~p ~p",
+                                    [Code, Message]),
+                            error;
+                        {error, Reason} ->
+                            ?LOG_INFO("client error exporting spans ~p", [Reason]),
+                            error
+                    end
+            end;
+        false ->
+            ok
     end.
 
 shutdown(_) ->
@@ -61,6 +66,9 @@ shutdown(_) ->
 
 %%
 
+
+opentelemetry_enabled() ->
+    application:get_env(opentelemetry, enabled, false).
 
 zipkin_span(Span, LocalEndpoint) ->
     #zipkin_span{
