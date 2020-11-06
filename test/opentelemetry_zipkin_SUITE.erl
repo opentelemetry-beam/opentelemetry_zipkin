@@ -4,7 +4,7 @@
 
 -include_lib("stdlib/include/assert.hrl").
 -include_lib("opentelemetry_api/include/opentelemetry.hrl").
--include_lib("opentelemetry/include/ot_span.hrl").
+-include_lib("opentelemetry/include/otel_span.hrl").
 
 all() ->
     [verify_export].
@@ -17,7 +17,7 @@ verify_export(_Config) ->
                   _ ->
                       "http://zipkin:9411/api/v2/spans"
               end,
-    Resource = ot_resource:create([{"service.name",
+    Resource = otel_resource:create([{"service.name",
                                     "my-test-service"}]),
     {ok, State} = opentelemetry_zipkin:init(#{address => Address,
                                              local_endpoint => #{service_name => my_service,
