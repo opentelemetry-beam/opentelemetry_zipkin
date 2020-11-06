@@ -128,8 +128,6 @@ to_parent_id(ParentId) ->
 
 to_kind(undefined) ->
     'SPAN_KIND_UNSPECIFIED';
-to_kind(?SPAN_KIND_UNSPECIFIED) ->
-    'SPAN_KIND_UNSPECIFIED';
 to_kind(?SPAN_KIND_INTERNAL) ->
     'SPAN_KIND_UNSPECIFIED';
 to_kind(?SPAN_KIND_PRODUCER) ->
