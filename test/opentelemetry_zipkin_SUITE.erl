@@ -43,6 +43,7 @@ verify_export(_Config) ->
                         #event{system_time_nano=erlang:system_time(nanosecond),
                                name = <<"event-2">>,
                                attributes = [{<<"attr-3">>, <<"value-3">>}]}],
+              status=opentelemetry:status(?SPAN_KIND_INTERNAL, <<"some message about status">>),
               attributes = [{<<"attr-2">>, <<"value-2">>}]},
     true = ets:insert(Tid, ParentSpan),
 
