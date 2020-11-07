@@ -1,11 +1,10 @@
-{"1.2.0",
-[{<<"opentelemetry">>,{pkg,<<"opentelemetry">>,<<"0.4.1">>},0},
- {<<"opentelemetry_api">>,{pkg,<<"opentelemetry_api">>,<<"0.4.1">>},0}]}.
-[
-{pkg_hash,[
- {<<"opentelemetry">>, <<"519F0E2DAA89D1C4A0FB37310DB9828EE89181E6CFF349F6B1FDBDA2FC4441E5">>},
- {<<"opentelemetry_api">>, <<"AFCE47063E099407DAA105BF25E2AAE75822F3C25B61A213F9328FF40AE6C448">>}]},
-{pkg_hash_ext,[
- {<<"opentelemetry">>, <<"AFBA124EBE368FD530DB30347EC3BF41F489A3D9B245BFD8397D5753B83E3AAE">>},
- {<<"opentelemetry_api">>, <<"7B057CA9BD5F2220D02FE2337630979DF27C8D0FEFC6EBA371FB3CB202EB618E">>}]}
-].
+[{<<"opentelemetry">>,
+  {git_subdir,"git://github.com/open-telemetry/opentelemetry-erlang",
+              {ref,"bcd54678ef67517c31f65b780f03b752b155a950"},
+              "apps/opentelemetry"},
+  0},
+ {<<"opentelemetry_api">>,
+  {git_subdir,"git://github.com/open-telemetry/opentelemetry-erlang",
+              {ref,"bcd54678ef67517c31f65b780f03b752b155a950"},
+              "apps/opentelemetry_api"},
+  0}].
