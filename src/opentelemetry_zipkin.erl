@@ -6,7 +6,7 @@
 
 -include_lib("kernel/include/logger.hrl").
 -include_lib("opentelemetry_api/include/opentelemetry.hrl").
--include_lib("opentelemetry/include/ot_span.hrl").
+-include_lib("opentelemetry/include/otel_span.hrl").
 -include("opentelemetry_zipkin_pb.hrl").
 
 -define(DEFAULT_ZIPKIN_ADDRESS, "http://localhost:9411/api/v2/spans").
@@ -23,7 +23,7 @@ init(Opts) ->
 
 export(Tab, Resource, #state{address=Address,
                              endpoint=LocalEndpoint}) ->
-    Attributes = ot_resource:attributes(Resource),
+    Attributes = otel_resource:attributes(Resource),
     LocalEndpoint1 = local_endpoint_from_resource(Attributes, LocalEndpoint),
     ZSpans = ets:foldl(fun(Span, Acc) ->
                                try zipkin_span(Span, LocalEndpoint1) of
