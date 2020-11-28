@@ -1,10 +1,11 @@
-[{<<"opentelemetry">>,
-  {git_subdir,"git://github.com/open-telemetry/opentelemetry-erlang",
-              {ref,"bcd54678ef67517c31f65b780f03b752b155a950"},
-              "apps/opentelemetry"},
-  0},
- {<<"opentelemetry_api">>,
-  {git_subdir,"git://github.com/open-telemetry/opentelemetry-erlang",
-              {ref,"bcd54678ef67517c31f65b780f03b752b155a950"},
-              "apps/opentelemetry_api"},
-  0}].
+{"1.2.0",
+[{<<"opentelemetry">>,{pkg,<<"opentelemetry">>,<<"0.5.0">>},0},
+ {<<"opentelemetry_api">>,{pkg,<<"opentelemetry_api">>,<<"0.5.0">>},0}]}.
+[
+{pkg_hash,[
+ {<<"opentelemetry">>, <<"6A7072A6F54B8BE07A42DD2AACA1EE0389038681405D0A27C4C5E5325B6C1A82">>},
+ {<<"opentelemetry_api">>, <<"29ECAA7BB86DF4DBD44B14FD71FD4FAADFF5C08D178545B66B3861BD350BE28A">>}]},
+{pkg_hash_ext,[
+ {<<"opentelemetry">>, <<"A45261C421240199184D55447108F1D9F49C6B2B0E0E2056AAAA1A1FE77D2EDA">>},
+ {<<"opentelemetry_api">>, <<"FA3C23198E84D6D1CDB8A4408374C8D73C9D2EE7A9E587A6D539DEF15851FFAD">>}]}
+].
