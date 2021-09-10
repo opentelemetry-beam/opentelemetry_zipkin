@@ -12,13 +12,6 @@ jobs:
   build:
     name: Test on OTP ${{ matrix.otp_version }} and ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-
-    services:
-      zipkin:
-        image: openzipkin/zipkin-slim
-        ports:
-        - 9411:9411
-
     strategy:
       matrix:
         otp_version: ['24.0.2', '23.3.4.2', '22.3.4.20']
@@ -33,6 +26,8 @@ jobs:
       OTEL_TRACES_EXPORTER: "none"
     steps:
     - uses: actions/checkout@v2
+    - name: Run Zipkin
+      run: docker-compose up -d
     - uses: erlef/setup-beam@v1
       with:
         otp-version: ${{ matrix.otp_version }}
