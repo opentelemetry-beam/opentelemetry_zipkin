@@ -1,3 +1,7 @@
+# ARCHIVED
+
+This project has moved to the [main OpenTelemetry Erlang/Elixir repo](https://github.com/open-telemetry/opentelemetry-erlang/).
+
 # OpenTelemetry Zipkin Exporter
 
 ![](https://github.com/opentelemetry-beam/opentelemetry_zipkin/workflows/OpenTelemetry%20Zipkin%20Tests/badge.svg)
